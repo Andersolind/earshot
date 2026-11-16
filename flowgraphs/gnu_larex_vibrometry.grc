@@ -1,0 +1,1920 @@
+options:
+  parameters:
+    author: GNU-Larex DSP Suite
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: 'Ultimate RF Micro-Doppler Vibrometry, Subvocalization & Respiration Flowgraph'
+    copyright: ''
+    description: 'Captures chest breathing & laryngeal subvocalization micro-displacements via SDR RF Doppler (or built-in physiological radar simulator), performs clutter circle-center calibration, continuous arctan phase unwrapping (um), STFT spectral gating, infrasonic-to-audible sonification, BPM tracking, and 4-channel WAV recording.'
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: gnu_larex_vibrometry_grc
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 'GNU-Larex: RF Vibrometry, Subvocalization & Respiration Suite'
+    window_size: (1680,1040)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 16.0]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: rf_samp_rate
+  id: variable
+  parameters:
+    comment: '960 kSps (20x 48 kHz; native on RTL-SDR, Pluto, USRP)'
+    value: '960000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [224, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: baseband_rate
+  id: variable
+  parameters:
+    comment: '48 kHz audio & phase-demodulation rate'
+    value: '48000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [368, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: acoustic_view_rate
+  id: variable
+  parameters:
+    comment: '8 kHz rate -> 0..4000 Hz full-width waterfall zoom'
+    value: '8000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [504, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: breath_rate
+  id: variable
+  parameters:
+    comment: '400 Hz rate -> 10-second respiratory scope & BPM'
+    value: '400'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [656, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: decim_rf
+  id: variable
+  parameters:
+    comment: ''
+    value: int(rf_samp_rate // baseband_rate)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [784, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: decim_view
+  id: variable
+  parameters:
+    comment: ''
+    value: int(baseband_rate // acoustic_view_rate)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [888, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: decim_breath
+  id: variable
+  parameters:
+    comment: ''
+    value: int(baseband_rate // breath_rate)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1000, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: main_tabs
+  id: qtgui_tab_widget
+  parameters:
+    alias: ''
+    comment: ''
+    gui_hint: 4,0,1,4
+    label0: '1. Subvocalization Waterfall & Spectrum'
+    label1: '2. Respiration Monitor & Larynx Scope'
+    label2: '3. RF Radar I/Q Phasor & Baseband'
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    num_tabs: '3'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1136, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: source_mode
+  id: variable_qtgui_chooser
+  parameters:
+    comment: ''
+    gui_hint: 0,0,1,1
+    label: 'Input Source'
+    label0: 'Physiological RF Radar Simulator'
+    label1: 'Live SDR Hardware (SoapySDR)'
+    label2: ''
+    label3: ''
+    label4: ''
+    labels: '[]'
+    num_opts: '2'
+    option0: '0'
+    option1: '1'
+    option2: '2'
+    option3: '3'
+    option4: '4'
+    options: '[0, 1, 2]'
+    orient: Qt.QVBoxLayout
+    type: int
+    value: '0'
+    widget: combo_box
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: clutter_mode
+  id: variable_qtgui_chooser
+  parameters:
+    comment: ''
+    gui_hint: 0,1,1,1
+    label: 'Clutter Demodulator'
+    label0: 'Smart Curvature + Circle Fit'
+    label1: 'Small-Angle PCA Tangent Boost'
+    label2: 'Freeze Static Leakage Baseline'
+    label3: ''
+    label4: ''
+    labels: '[]'
+    num_opts: '3'
+    option0: '0'
+    option1: '1'
+    option2: '2'
+    option3: '3'
+    option4: '4'
+    options: '[0, 1, 2]'
+    orient: Qt.QVBoxLayout
+    type: int
+    value: '0'
+    widget: combo_box
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: audio_mix_mode
+  id: variable_qtgui_chooser
+  parameters:
+    comment: ''
+    gui_hint: 0,2,1,1
+    label: 'Headphone Mix Mode'
+    label0: 'Stereo Split (L: Subvoc | R: Breath)'
+    label1: 'Binaural Spatial Blend'
+    label2: 'Pure Subvocalization Focus'
+    label3: 'Pure Sonified Breathing (<20 Hz)'
+    label4: ''
+    labels: '[]'
+    num_opts: '4'
+    option0: '0'
+    option1: '1'
+    option2: '2'
+    option3: '3'
+    option4: '4'
+    options: '[0, 1, 2, 3]'
+    orient: Qt.QVBoxLayout
+    type: int
+    value: '0'
+    widget: combo_box
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [408, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: record_enable
+  id: variable_qtgui_check_box
+  parameters:
+    comment: ''
+    'false': 'False'
+    gui_hint: 0,3,1,1
+    label: 'REC 4-Ch WAV + Biometric CSV'
+    'true': 'True'
+    type: bool
+    value: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [616, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: rf_freq_mhz
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 1,0,1,1
+    label: 'RF Carrier Freq (MHz)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '70.0'
+    step: '0.5'
+    stop: '6000.0'
+    value: '915.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: rf_gain
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 1,1,1,1
+    label: 'SDR RX Gain (dB)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0.0'
+    step: '1.0'
+    stop: '70.0'
+    value: '35.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [984, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: subvoc_low_hz
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 1,2,1,1
+    label: 'Larynx High-Pass (Hz)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '40.0'
+    step: '5.0'
+    stop: '220.0'
+    value: '70.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1144, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: subvoc_high_hz
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 1,3,1,1
+    label: 'Larynx Low-Pass (Hz)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '800.0'
+    step: '50.0'
+    stop: '3800.0'
+    value: '2600.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1312, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: gate_thresh_db
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 2,0,1,1
+    label: 'Spectral Noise Gate (dB)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '-75.0'
+    step: '1.0'
+    stop: '-15.0'
+    value: '-42.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1480, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: subvoc_gain_db
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 2,1,1,1
+    label: 'Subvoc Gain (dB)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '-6.0'
+    step: '1.0'
+    stop: '45.0'
+    value: '18.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1480, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: breath_carrier_hz
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 2,2,1,1
+    label: 'Breath Sonifier Pitch (Hz)'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '80.0'
+    step: '2.0'
+    stop: '380.0'
+    value: '168.0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1312, 16.0]
+    rotation: 0
+    state: enabled
+
+- name: breath_mix_gain
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 2,3,1,1
+    label: 'Sonified Breath Level'
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0.0'
+    step: '0.05'
+    stop: '1.5'
+    value: '0.45'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1648, 128.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_radar_src
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import HybridSDRRadarSource
+
+
+      class blk(HybridSDRRadarSource):
+          def __init__(
+              self,
+              rf_samp_rate=960000.0,
+              baseband_rate=48000.0,
+              rf_freq_mhz=915.0,
+              rf_gain=35.0,
+              source_mode=0,
+              sdr_args="",
+              enable_cw_tx=False,
+          ):
+              super().__init__(
+                  rf_samp_rate=rf_samp_rate,
+                  baseband_rate=baseband_rate,
+                  rf_freq_mhz=rf_freq_mhz,
+                  rf_gain=rf_gain,
+                  source_mode=source_mode,
+                  sdr_args=sdr_args,
+                  enable_cw_tx=enable_cw_tx,
+              )
+
+          @property
+          def source_mode(self):
+              return self._source_mode_val
+
+          @source_mode.setter
+          def source_mode(self, val):
+              self._source_mode_val = int(val)
+              self._sdr_attempted = False
+
+          @property
+          def rf_freq_mhz(self):
+              return self._rf_freq_val
+
+          @rf_freq_mhz.setter
+          def rf_freq_mhz(self, val):
+              self._rf_freq_val = float(val)
+              if hasattr(self, "_sim"):
+                  self._sim.rf_freq_mhz = self._rf_freq_val
+              if getattr(self, "_sdr", None) is not None:
+                  try:
+                      from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX
+                      self._sdr.setFrequency(SOAPY_SDR_RX, 0, self._rf_freq_val * 1e6)
+                      if self._tx_stream is not None:
+                          self._sdr.setFrequency(SOAPY_SDR_TX, 0, self._rf_freq_val * 1e6)
+                  except Exception:
+                      pass
+
+          @property
+          def rf_gain(self):
+              return self._rf_gain_val
+
+          @rf_gain.setter
+          def rf_gain(self, val):
+              self._rf_gain_val = float(val)
+              if getattr(self, "_sdr", None) is not None:
+                  try:
+                      from SoapySDR import SOAPY_SDR_RX
+                      self._sdr.setGain(SOAPY_SDR_RX, 0, self._rf_gain_val)
+                  except Exception:
+                      pass
+    affinity: ''
+    alias: ''
+    baseband_rate: baseband_rate
+    comment: 'SoapySDR Hardware OR Physiological Radar Sim'
+    enable_cw_tx: 'False'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rf_freq_mhz: rf_freq_mhz
+    rf_gain: rf_gain
+    rf_samp_rate: rf_samp_rate
+    sdr_args: '""'
+    source_mode: source_mode
+  states:
+    _io_cache: ('Hybrid SDR / Radar Vibrometry Source', 'blk', [('rf_samp_rate', '960000.0'), ('baseband_rate', '48000.0'), ('rf_freq_mhz', '915.0'), ('rf_gain', '35.0'), ('source_mode', '0'), ('sdr_args', "''"), ('enable_cw_tx', 'False')], [], [('0', 'complex', 1)], '', ['baseband_rate', 'enable_cw_tx', 'rf_freq_mhz', 'rf_gain', 'rf_samp_rate', 'sdr_args', 'source_mode'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [16, 360.0]
+    rotation: 0
+    state: enabled
+
+- name: lpf_rf_decim
+  id: low_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: '960 kSps -> 48 kSps Anti-Alias Decimator'
+    cutoff_freq: '12000'
+    decim: decim_rf
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: rf_samp_rate
+    type: fir_filter_ccf
+    width: '3500'
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [272, 348.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_iq_clutter
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import IQClutterCancellerCore
+
+
+      class blk(gr.sync_block):
+          def __init__(self, alpha=0.005, mode=0):
+              gr.sync_block.__init__(
+                  self,
+                  name="Adaptive I/Q Clutter & Circle Canceller",
+                  in_sig=[np.complex64],
+                  out_sig=[np.complex64],
+              )
+              self._core = IQClutterCancellerCore(alpha=alpha, mode=mode)
+              self.alpha = alpha
+              self.mode = mode
+
+          @property
+          def alpha(self):
+              return self._core.alpha
+
+          @alpha.setter
+          def alpha(self, val):
+              self._core.alpha = float(val)
+
+          @property
+          def mode(self):
+              return self._core.mode
+
+          @mode.setter
+          def mode(self, val):
+              self._core.mode = int(val)
+
+          def work(self, input_items, output_items):
+              output_items[0][:] = self._core.process(input_items[0])
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    alpha: '0.005'
+    comment: 'Centers radar arc & removes TX-RX leakage'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    mode: clutter_mode
+  states:
+    _io_cache: ('Adaptive I/Q Clutter & Circle Canceller', 'blk', [('alpha', '0.005'), ('mode', '0')], [('0', 'complex', 1)], [('0', 'complex', 1)], '', ['alpha', 'mode'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [496, 384.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_phase_demod
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import PhaseVibrometerCore
+
+
+      class blk(gr.sync_block):
+          def __init__(self, samp_rate=48000.0, rf_freq_mhz=915.0):
+              gr.sync_block.__init__(
+                  self,
+                  name="Arctan Phase Vibrometer (rad -> um)",
+                  in_sig=[np.complex64],
+                  out_sig=[np.float32],
+              )
+              self._core = PhaseVibrometerCore(samp_rate=samp_rate, rf_freq_mhz=rf_freq_mhz)
+              self.samp_rate = samp_rate
+              self.rf_freq_mhz = rf_freq_mhz
+
+          @property
+          def rf_freq_mhz(self):
+              return self._core.rf_freq_mhz
+
+          @rf_freq_mhz.setter
+          def rf_freq_mhz(self, val):
+              self._core.rf_freq_mhz = float(val)
+
+          def work(self, input_items, output_items):
+              output_items[0][:] = self._core.process(input_items[0])
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    comment: 'Continuous phase unwrap -> tissue displacement (um)'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rf_freq_mhz: rf_freq_mhz
+    samp_rate: baseband_rate
+  states:
+    _io_cache: ('Arctan Phase Vibrometer (rad -> um)', 'blk', [('samp_rate', '48000.0'), ('rf_freq_mhz', '915.0')], [('0', 'complex', 1)], [('0', 'float', 1)], '', ['rf_freq_mhz', 'samp_rate'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [744, 384.0]
+    rotation: 0
+    state: enabled
+
+- name: bpf_subvoc
+  id: band_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: 'Isolates vocal fold & silent-speech formants'
+    decim: '1'
+    gain: '1'
+    high_cutoff_freq: subvoc_high_hz
+    interp: '1'
+    low_cutoff_freq: subvoc_low_hz
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    type: fir_filter_fff
+    width: '35'
+    win: window.WIN_KAISER
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1008, 280.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_subvoc_enh
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import SubvocSpectralEnhancerCore
+
+
+      class blk(gr.sync_block):
+          def __init__(self, samp_rate=48000.0, gate_thresh_db=-42.0, gain_db=18.0):
+              gr.sync_block.__init__(
+                  self,
+                  name="Subvocalization STFT Gate & Enhancer",
+                  in_sig=[np.float32],
+                  out_sig=[np.float32],
+              )
+              self._core = SubvocSpectralEnhancerCore(
+                  samp_rate=samp_rate,
+                  gate_thresh_db=gate_thresh_db,
+                  gain_db=gain_db,
+              )
+              self.samp_rate = samp_rate
+              self.gate_thresh_db = gate_thresh_db
+              self.gain_db = gain_db
+
+          @property
+          def gate_thresh_db(self):
+              return self._core.gate_thresh_db
+
+          @gate_thresh_db.setter
+          def gate_thresh_db(self, val):
+              self._core.gate_thresh_db = float(val)
+
+          @property
+          def gain_db(self):
+              return self._core.gain_db
+
+          @gain_db.setter
+          def gain_db(self, val):
+              self._core.gain_db = float(val)
+
+          def work(self, input_items, output_items):
+              output_items[0][:] = self._core.process(input_items[0])
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    comment: 'STFT Wiener Noise Gate + Formant EQ + Soft-Knee AGC'
+    gain_db: subvoc_gain_db
+    gate_thresh_db: gate_thresh_db
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+  states:
+    _io_cache: ('Subvocalization STFT Gate & Enhancer', 'blk', [('samp_rate', '48000.0'), ('gate_thresh_db', '-42.0'), ('gain_db', '18.0')], [('0', 'float', 1)], [('0', 'float', 1)], '', ['gain_db', 'gate_thresh_db', 'samp_rate'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1240, 316.0]
+    rotation: 0
+    state: enabled
+
+- name: scale_raw_view
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    const: '0.035'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1240, 240.0]
+    rotation: 0
+    state: enabled
+
+- name: lpf_view_raw
+  id: low_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: 'Decimate 48k -> 8k for 0..4 kHz FFT'
+    cutoff_freq: '3600'
+    decim: decim_view
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    type: fir_filter_fff
+    width: '400'
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1488, 224.0]
+    rotation: 0
+    state: enabled
+
+- name: lpf_view_enh
+  id: low_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: 'Decimate 48k -> 8k for 0..4 kHz Waterfall'
+    cutoff_freq: '3600'
+    decim: decim_view
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    type: fir_filter_fff
+    width: '400'
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1488, 368.0]
+    rotation: 0
+    state: enabled
+
+- name: lpf_infrasonic
+  id: low_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: 'Isolate < 16 Hz infrasonic breathing & tension'
+    cutoff_freq: '16'
+    decim: '1'
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    type: fir_filter_fff
+    width: '12'
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1008, 464.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_infra_sonifier
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import InfrasonicSonifierCore
+
+
+      class blk(gr.sync_block):
+          def __init__(self, samp_rate=48000.0, carrier_hz=168.0, vad_thresh_db=-42.0):
+              gr.sync_block.__init__(
+                  self,
+                  name="Infrasonic Breathing Sonifier & VAD",
+                  in_sig=[np.float32, np.float32],
+                  out_sig=[np.float32, np.float32],
+              )
+              self._core = InfrasonicSonifierCore(
+                  samp_rate=samp_rate,
+                  carrier_hz=carrier_hz,
+                  vad_thresh_db=vad_thresh_db,
+              )
+              self.samp_rate = samp_rate
+              self.carrier_hz = carrier_hz
+              self.vad_thresh_db = vad_thresh_db
+
+          @property
+          def carrier_hz(self):
+              return self._core.carrier_hz
+
+          @carrier_hz.setter
+          def carrier_hz(self, val):
+              self._core.carrier_hz = float(val)
+
+          @property
+          def vad_thresh_db(self):
+              return self._core.vad_thresh_db
+
+          @vad_thresh_db.setter
+          def vad_thresh_db(self, val):
+              self._core.vad_thresh_db = float(val)
+
+          def work(self, input_items, output_items):
+              sonified, vad = self._core.process(input_items[0], input_items[1])
+              output_items[0][:] = sonified
+              output_items[1][:] = vad
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    carrier_hz: breath_carrier_hz
+    comment: 'FM/AM warm breathing sonifier + Subvoc VAD'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    vad_thresh_db: gate_thresh_db
+  states:
+    _io_cache: ('Infrasonic Breathing Sonifier & VAD', 'blk', [('samp_rate', '48000.0'), ('carrier_hz', '168.0'), ('vad_thresh_db', '-42.0')], [('0', 'float', 1), ('1', 'float', 1)], [('0', 'float', 1), ('1', 'float', 1)], '', ['carrier_hz', 'samp_rate', 'vad_thresh_db'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1240, 496.0]
+    rotation: 0
+    state: enabled
+
+- name: lpf_breath_decim
+  id: low_pass_filter
+  parameters:
+    affinity: ''
+    alias: ''
+    beta: '6.76'
+    comment: 'Decimate 48 kHz -> 400 Hz respiratory band'
+    cutoff_freq: '2.2'
+    decim: decim_breath
+    gain: '1'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: baseband_rate
+    type: fir_filter_fff
+    width: '15.0'
+    win: window.WIN_HAMMING
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1008, 636.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_biometrics
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists() and _cand not in sys.path:
+              sys.path.insert(0, _cand)
+
+      from src.larex_dsp import BiometricTrackerCore
+
+
+      class blk(gr.sync_block):
+          def __init__(self, samp_rate=400.0):
+              gr.sync_block.__init__(
+                  self,
+                  name="Biometric Respiration & Displacement Tracker",
+                  in_sig=[np.float32],
+                  out_sig=[np.float32, np.float32, np.float32],
+              )
+              self._core = BiometricTrackerCore(samp_rate=samp_rate)
+              self.samp_rate = samp_rate
+
+          def work(self, input_items, output_items):
+              w, b, d = self._core.process(input_items[0])
+              output_items[0][:] = w
+              output_items[1][:] = b
+              output_items[2][:] = d
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    comment: 'Autocorrelation BPM + P-P Excursion (um)'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: breath_rate
+  states:
+    _io_cache: ('Biometric Respiration & Displacement Tracker', 'blk', [('samp_rate', '400.0')], [('0', 'float', 1)], [('0', 'float', 1), ('1', 'float', 1), ('2', 'float', 1)], '', ['samp_rate'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1240, 656.0]
+    rotation: 0
+    state: enabled
+
+- name: epy_master_out
+  id: epy_block
+  parameters:
+    _source_code: |
+      import os
+      import sys
+      from pathlib import Path
+      import numpy as np
+      from gnuradio import gr
+
+      _root = None
+      for _cand in [
+          os.environ.get("GNU_LAREX_ROOT", ""),
+          str(Path.cwd()),
+          str(Path.cwd().parent),
+          r"C:\Users\Anders\Documents\Clients\GNU-Larex",
+      ]:
+          if _cand and (Path(_cand) / "src" / "larex_dsp.py").exists():
+              _root = _cand
+              if _cand not in sys.path:
+                  sys.path.insert(0, _cand)
+              break
+
+      from src.larex_dsp import MasterExperienceOutputCore
+
+
+      class blk(gr.sync_block):
+          def __init__(
+              self,
+              samp_rate=48000.0,
+              audio_mix_mode=0,
+              breath_mix_gain=0.45,
+              record_enable=False,
+          ):
+              gr.sync_block.__init__(
+                  self,
+                  name="Stereo Experience Matrix & 4-Ch Recorder",
+                  in_sig=[np.float32, np.float32, np.float32, np.float32],
+                  out_sig=[np.float32, np.float32],
+              )
+              rec_dir = str(Path(_root) / "recordings") if _root else "recordings"
+              self._core = MasterExperienceOutputCore(
+                  samp_rate=samp_rate,
+                  audio_mix_mode=audio_mix_mode,
+                  breath_mix_gain=breath_mix_gain,
+                  record_enable=record_enable,
+                  recordings_dir=rec_dir,
+              )
+              self.samp_rate = samp_rate
+              self.audio_mix_mode = audio_mix_mode
+              self.breath_mix_gain = breath_mix_gain
+              self.record_enable = record_enable
+
+          @property
+          def audio_mix_mode(self):
+              return self._core.audio_mix_mode
+
+          @audio_mix_mode.setter
+          def audio_mix_mode(self, val):
+              self._core.audio_mix_mode = int(val)
+
+          @property
+          def breath_mix_gain(self):
+              return self._core.breath_mix_gain
+
+          @breath_mix_gain.setter
+          def breath_mix_gain(self, val):
+              self._core.breath_mix_gain = float(val)
+
+          @property
+          def record_enable(self):
+              return self._core.record_enable
+
+          @record_enable.setter
+          def record_enable(self, val):
+              self._core.record_enable = bool(val)
+
+          def stop(self):
+              self._core.close()
+              return True
+
+          def work(self, input_items, output_items):
+              l_out, r_out = self._core.process(
+                  input_items[0],
+                  input_items[1],
+                  input_items[2],
+                  input_items[3],
+              )
+              output_items[0][:] = l_out
+              output_items[1][:] = r_out
+              return len(output_items[0])
+    affinity: ''
+    alias: ''
+    audio_mix_mode: audio_mix_mode
+    breath_mix_gain: breath_mix_gain
+    comment: '4-Mode Headphone Mixer & 4-Ch WAV/CSV Logger'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    record_enable: record_enable
+    samp_rate: baseband_rate
+  states:
+    _io_cache: ('Stereo Experience Matrix & 4-Ch Recorder', 'blk', [('samp_rate', '48000.0'), ('audio_mix_mode', '0'), ('breath_mix_gain', '0.45'), ('record_enable', 'False')], [('0', 'float', 1), ('1', 'float', 1), ('2', 'float', 1), ('3', 'float', 1)], [('0', 'float', 1), ('1', 'float', 1)], '', ['audio_mix_mode', 'breath_mix_gain', 'record_enable', 'samp_rate'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1520, 512.0]
+    rotation: 0
+    state: enabled
+
+- name: audio_out
+  id: audio_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'Stereo Headphone Monitoring (48 kHz)'
+    device_name: ''
+    num_inputs: '2'
+    ok_to_block: 'True'
+    samp_rate: baseband_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1816, 528.0]
+    rotation: 0
+    state: enabled
+
+- name: waterfall_subvoc
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: acoustic_view_rate
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'False'
+    grid: 'False'
+    gui_hint: main_tabs@0:0,0,1,1
+    int_max: '-10'
+    int_min: '-105'
+    label1: 'Enhanced Subvocalization'
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '"Subvocalization & Laryngeal Micro-Doppler Spectrogram (0 - 4000 Hz)"'
+    nconnections: '1'
+    showports: 'False'
+    type: float
+    update_time: '0.05'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1768, 368.0]
+    rotation: 0
+    state: enabled
+
+- name: freq_subvoc
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '0.6'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '0.2'
+    axislabels: 'True'
+    bw: acoustic_view_rate
+    color1: '"cyan"'
+    color10: '"dark blue"'
+    color2: '"yellow"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'False'
+    grid: 'True'
+    gui_hint: main_tabs@0:1,0,1,1
+    label: Relative Gain
+    label1: 'Raw Bandpass (70-2600 Hz)'
+    label10: ''''''
+    label2: 'Enhanced Subvocalization'
+    label3: ''''''
+    label4: ''''''
+    label5: ''''''
+    label6: ''''''
+    label7: ''''''
+    label8: ''''''
+    label9: ''''''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '"Acoustic FFT: Raw Bandpass vs. Spectrally-Gated Subvocalization"'
+    nconnections: '2'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: float
+    units: dB
+    update_time: '0.06'
+    width1: '1'
+    width10: '1'
+    width2: '2'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '5'
+    ymin: '-110'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1768, 232.0]
+    rotation: 0
+    state: enabled
+
+- name: time_resp
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'True'
+    axislabels: 'True'
+    color1: green
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'False'
+    grid: 'True'
+    gui_hint: main_tabs@1:0,0,1,1
+    label1: 'Respiration Wave (um)'
+    label10: Signal 10
+    label2: Signal 2
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '"Respiration & Neck Macro-Displacement (10-Second Window, um)"'
+    nconnections: '1'
+    size: '4000'
+    srate: breath_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: float
+    update_time: '0.08'
+    width1: '2'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Displacement
+    ymax: '1000'
+    ymin: '-1000'
+    yunit: '"um"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1520, 640.0]
+    rotation: 0
+    state: enabled
+
+- name: time_subvoc
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: cyan
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'False'
+    grid: 'True'
+    gui_hint: main_tabs@1:1,0,1,1
+    label1: 'Enhanced Subvocalization'
+    label10: Signal 10
+    label2: 'Subvocalization VAD Gate'
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '"Laryngeal / Subvocalization Waveform & VAD Envelope (50 ms)"'
+    nconnections: '2'
+    size: '2400'
+    srate: baseband_rate
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: float
+    update_time: '0.05'
+    width1: '1'
+    width10: '1'
+    width2: '2'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '1.05'
+    ymin: '-1.05'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1816, 632.0]
+    rotation: 0
+    state: enabled
+
+- name: num_bpm
+  id: qtgui_number_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    autoscale: 'False'
+    avg: '0.2'
+    color1: ("#3fb950", "#161b22")
+    color10: ("black", "black")
+    color2: ("black", "black")
+    color3: ("black", "black")
+    color4: ("black", "black")
+    color5: ("black", "black")
+    color6: ("black", "black")
+    color7: ("black", "black")
+    color8: ("black", "black")
+    color9: ("black", "black")
+    comment: ''
+    factor1: '1'
+    factor10: '1'
+    factor2: '1'
+    factor3: '1'
+    factor4: '1'
+    factor5: '1'
+    factor6: '1'
+    factor7: '1'
+    factor8: '1'
+    factor9: '1'
+    graph_type: qtgui.NUM_GRAPH_HORIZ
+    gui_hint: 3,0,1,1
+    label1: 'Breathing Rate'
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    max: '40'
+    min: '0'
+    name: '"Respiration (BPM)"'
+    nconnections: '1'
+    type: float
+    unit1: BPM
+    unit10: ''
+    unit2: ''
+    unit3: ''
+    unit4: ''
+    unit5: ''
+    unit6: ''
+    unit7: ''
+    unit8: ''
+    unit9: ''
+    update_time: '0.20'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1520, 748.0]
+    rotation: 0
+    state: enabled
+
+- name: num_disp
+  id: qtgui_number_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    autoscale: 'False'
+    avg: '0.2'
+    color1: ("#58a6ff", "#161b22")
+    color10: ("black", "black")
+    color2: ("black", "black")
+    color3: ("black", "black")
+    color4: ("black", "black")
+    color5: ("black", "black")
+    color6: ("black", "black")
+    color7: ("black", "black")
+    color8: ("black", "black")
+    color9: ("black", "black")
+    comment: ''
+    factor1: '1'
+    factor10: '1'
+    factor2: '1'
+    factor3: '1'
+    factor4: '1'
+    factor5: '1'
+    factor6: '1'
+    factor7: '1'
+    factor8: '1'
+    factor9: '1'
+    graph_type: qtgui.NUM_GRAPH_HORIZ
+    gui_hint: 3,1,1,2
+    label1: 'P-P Excursion'
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    max: '2500'
+    min: '0'
+    name: '"Chest / Neck Motion (um)"'
+    nconnections: '1'
+    type: float
+    unit1: um
+    unit10: ''
+    unit2: ''
+    unit3: ''
+    unit4: ''
+    unit5: ''
+    unit6: ''
+    unit7: ''
+    unit8: ''
+    unit9: ''
+    update_time: '0.20'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1520, 856.0]
+    rotation: 0
+    state: enabled
+
+- name: num_vad
+  id: qtgui_number_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    autoscale: 'False'
+    avg: '0.1'
+    color1: ("#f0883e", "#161b22")
+    color10: ("black", "black")
+    color2: ("black", "black")
+    color3: ("black", "black")
+    color4: ("black", "black")
+    color5: ("black", "black")
+    color6: ("black", "black")
+    color7: ("black", "black")
+    color8: ("black", "black")
+    color9: ("black", "black")
+    comment: ''
+    factor1: '1'
+    factor10: '1'
+    factor2: '1'
+    factor3: '1'
+    factor4: '1'
+    factor5: '1'
+    factor6: '1'
+    factor7: '1'
+    factor8: '1'
+    factor9: '1'
+    graph_type: qtgui.NUM_GRAPH_HORIZ
+    gui_hint: 3,3,1,1
+    label1: 'Larynx VAD'
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    max: '1.0'
+    min: '0.0'
+    name: '"Subvocalization Activity"'
+    nconnections: '1'
+    type: float
+    unit1: ''
+    unit10: ''
+    unit2: ''
+    unit3: ''
+    unit4: ''
+    unit5: ''
+    unit6: ''
+    unit7: ''
+    unit8: ''
+    unit9: ''
+    update_time: '0.08'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1816, 756.0]
+    rotation: 0
+    state: enabled
+
+- name: const_iq
+  id: qtgui_const_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '0.75'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: '"red"'
+    color10: '"red"'
+    color2: '"green"'
+    color3: '"red"'
+    color4: '"red"'
+    color5: '"red"'
+    color6: '"red"'
+    color7: '"red"'
+    color8: '"red"'
+    color9: '"red"'
+    comment: ''
+    grid: 'True'
+    gui_hint: main_tabs@2:0,0,1,1
+    label1: 'Raw Decimated I/Q (with Clutter)'
+    label10: ''
+    label2: 'Clutter-Cancelled Centered Radar Arc'
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    marker1: '0'
+    marker10: '0'
+    marker2: '0'
+    marker3: '0'
+    marker4: '0'
+    marker5: '0'
+    marker6: '0'
+    marker7: '0'
+    marker8: '0'
+    marker9: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '"RF Radar I/Q Phasor Constellation"'
+    nconnections: '2'
+    size: '1024'
+    style1: '0'
+    style10: '0'
+    style2: '0'
+    style3: '0'
+    style4: '0'
+    style5: '0'
+    style6: '0'
+    style7: '0'
+    style8: '0'
+    style9: '0'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: complex
+    update_time: '0.08'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    xmax: '1.5'
+    xmin: '-1.5'
+    ymax: '1.5'
+    ymin: '-1.5'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [744, 520.0]
+    rotation: 0
+    state: enabled
+
+- name: freq_rf
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '0.2'
+    axislabels: 'True'
+    bw: baseband_rate
+    color1: '"cyan"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: rf_freq_mhz * 1e6
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'True'
+    gui_hint: main_tabs@2:0,1,1,1
+    label: Relative Gain
+    label1: 'Centered Baseband I/Q'
+    label10: ''''''
+    label2: ''''''
+    label3: ''''''
+    label4: ''''''
+    label5: ''''''
+    label6: ''''''
+    label7: ''''''
+    label8: ''''''
+    label9: ''''''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '"Clutter-Cancelled Complex Baseband Spectrum"'
+    nconnections: '1'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: complex
+    units: dB
+    update_time: '0.08'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-120'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [744, 640.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [epy_radar_src, '0', lpf_rf_decim, '0']
+- [lpf_rf_decim, '0', epy_iq_clutter, '0']
+- [lpf_rf_decim, '0', const_iq, '0']
+- [epy_iq_clutter, '0', epy_phase_demod, '0']
+- [epy_iq_clutter, '0', const_iq, '1']
+- [epy_iq_clutter, '0', freq_rf, '0']
+- [epy_phase_demod, '0', bpf_subvoc, '0']
+- [epy_phase_demod, '0', lpf_infrasonic, '0']
+- [epy_phase_demod, '0', lpf_breath_decim, '0']
+- [epy_phase_demod, '0', epy_master_out, '2']
+- [bpf_subvoc, '0', epy_subvoc_enh, '0']
+- [bpf_subvoc, '0', scale_raw_view, '0']
+- [scale_raw_view, '0', lpf_view_raw, '0']
+- [epy_subvoc_enh, '0', lpf_view_enh, '0']
+- [epy_subvoc_enh, '0', epy_infra_sonifier, '1']
+- [epy_subvoc_enh, '0', epy_master_out, '0']
+- [epy_subvoc_enh, '0', time_subvoc, '0']
+- [lpf_view_raw, '0', freq_subvoc, '0']
+- [lpf_view_enh, '0', freq_subvoc, '1']
+- [lpf_view_enh, '0', waterfall_subvoc, '0']
+- [lpf_infrasonic, '0', epy_infra_sonifier, '0']
+- [epy_infra_sonifier, '0', epy_master_out, '1']
+- [epy_infra_sonifier, '1', epy_master_out, '3']
+- [epy_infra_sonifier, '1', time_subvoc, '1']
+- [epy_infra_sonifier, '1', num_vad, '0']
+- [lpf_breath_decim, '0', epy_biometrics, '0']
+- [epy_biometrics, '0', time_resp, '0']
+- [epy_biometrics, '1', num_bpm, '0']
+- [epy_biometrics, '2', num_disp, '0']
+- [epy_master_out, '0', audio_out, '0']
+- [epy_master_out, '1', audio_out, '1']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0

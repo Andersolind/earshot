@@ -1,0 +1,106 @@
+# =============================================================================
+# GNU-Larex .gitignore
+# =============================================================================
+
+# --- Local Radioconda / Conda / Python Environments ---
+/radioconda/
+/radioconda_backup_*/
+/.cache/
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python Bytecode & Build Artifacts ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+build/
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Web Frontend (Node.js / Vite) ---
+node_modules/
+/web/dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# --- Downloaded ML Models & Caches (keep Ollama Modelfiles) ---
+/models/*
+!/models/Modelfile*
+!/models/.gitkeep
+*.onnx
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.gguf
+
+# --- Recordings, Telemetry Logs, Databases & Encryption Keys ---
+/recordings/*
+!/recordings/.gitkeep
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.iq
+*.raw
+*.cfile
+*.sigmf-data
+*.sigmf-meta
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.enc
+*.key
+*.pem
+
+# --- Environment Variables & Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- AI Agents, IDEs & Editor Directories ---
+/.agents/
+/.gemini/
+/.claude/
+/.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS Generated Files & Logs ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*.log
